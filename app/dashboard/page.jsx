@@ -824,89 +824,31 @@ if (loading) {
               <h2 className='text-xl font-semibold text-white mb-6'>My Sales History</h2>
               
               {/* Sales Analytics */}
-              {/* Sales Table */}
-              <div className='overflow-x-auto'>
-                <table className='w-full text-white'>
-                  <thead>
-                    <tr className='border-b border-white/20'>
-                      <th className='text-left py-3'>Item</th>
-                      <th className='text-left py-3'>Quantity</th>
-                      <th className='text-left py-3'>Final Price</th>
-                      <th className='text-left py-3'>Sale Type</th>
-                      <th className='text-left py-3'>Date & Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sales?.length > 0 ? (
-                      sales.map((sale) => {
-                        const saleTypeClass = sale.saleType === 'custom_price' 
-                          ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
-                          : 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
-                        
-                        const saleTypeText = sale.saleType === 'custom_price' 
-                          ? 'Custom Price' 
-                          : 'Standard';
+              <tbody>
+              {sales?.length > 0 ? (
+                sales.map((sale, index) => {
+                  // Create a stable key combining multiple properties
+                  const stableKey = `${sale.id || ''}_${sale.itemCode || ''}_${sale.soldAt?.seconds || ''}_${index}`;
+                  
+                  const saleTypeClass = sale.saleType === 'custom_price' 
+                    ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
+                    : 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
+                  
+                  const saleTypeText = sale.saleType === 'custom_price' 
+                    ? 'Custom Price' 
+                    : 'Standard';
 
-                        return (
-                          <tr key={sale.id || sale.itemCode || Math.random()} 
-                              className='border-b border-white/10 hover:bg-white/5 transition-colors'>
-                            <td className='py-3'>
-                              <div className='font-semibold'>
-                                {sale.brand || 'Unknown'} {sale.model || ''}
-                              </div>
-                              <div className='text-white/70 text-sm'>
-                                Code: {sale.itemCode || 'N/A'}
-                              </div>
-                            </td>
-                            <td className='py-3'>
-                              <span className='bg-white/10 px-3 py-1 rounded-full text-sm'>
-                                {sale.quantity || 1}
-                              </span>
-                            </td>
-                            <td className='py-3'>
-                              <div className='text-green-400 font-semibold'>
-                                MK {(sale.finalSalePrice || 0).toLocaleString('en-IN')}
-                              </div>
-                              {sale.saleType === 'custom_price' && (
-                                <div className='text-orange-400 text-sm mt-1'>
-                                  Custom price
-                                </div>
-                              )}
-                            </td>
-                            <td className='py-3'>
-                              <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${saleTypeClass}`}>
-                                {saleTypeText}
-                              </span>
-                            </td>
-                            <td className='py-3 text-sm'>
-                              {sale.soldAt?.toDate?.().toLocaleString('en-IN', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                hour12: true
-                              }) || 'Unknown date'}
-                            </td>
-                          </tr>
-                        );
-                      })
-                    ) : (
-                      <tr>
-                        <td colSpan="5" className='py-8 text-center text-white/70'>
-                          <div className='flex flex-col items-center justify-center'>
-                            <div className='text-4xl mb-2'>📊</div>
-                            No sales history found
-                            <div className='text-white/50 text-sm mt-1'>
-                              Start making sales to see them here
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                  return (
+                    <tr key={stableKey} 
+                        className='border-b border-white/10 hover:bg-white/5 transition-colors'>
+                      {/* ... rest of your code ... */}
+                    </tr>
+                  );
+                })
+              ) : (
+                {/* ... no sales section ... */}
+              )}
+            </tbody>
             </div>
           )}
         </div>

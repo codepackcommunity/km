@@ -1360,109 +1360,144 @@ export default function ManagerDashboard() {
           )}
 
           {/* Sales Analysis Tab */}
-          {activeTab === 'sales' && (
-            <div className="bg-white/5 backdrop-blur-lg rounded-lg border border-white/10 p-6">
-              <h2 className="text-xl font-semibold text-white mb-4">
-                Sales Analysis - {selectedLocation === 'all' ? 'All Locations' : selectedLocation}
-              </h2>
-              
-              {/* Metrics Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
-                  <h3 className="text-white/70 text-sm mb-1">Total Sales</h3>
-                  <p className="text-2xl font-bold text-white">
-                    {getFilteredSales()?.length || 0}
-                  </p>
+            {activeTab === 'sales' && (
+              <div className="bg-white/5 backdrop-blur-lg rounded-lg border border-white/10 p-6">
+                <h2 className="text-xl font-semibold text-white mb-4">
+                  Sales Analysis - {selectedLocation === 'all' ? 'All Locations' : selectedLocation}
+                </h2>
+                
+                {/* Metrics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <div className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                    <h3 className="text-white/70 text-sm mb-1">Total Sales</h3>
+                    <p className="text-2xl font-bold text-white">
+                      {getFilteredSales()?.length || 0}
+                    </p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                    <h3 className="text-white/70 text-sm mb-1">Total Revenue</h3>
+                    <p className="text-2xl font-bold text-green-400">
+                      MK {(getFilteredSales()?.reduce((total, sale) => 
+                        total + (Number(sale.finalSalePrice) || 0), 0) || 0).toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                  <div className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
+                    <h3 className="text-white/70 text-sm mb-1">Monthly Revenue</h3>
+                    <p className="text-2xl font-bold text-blue-400">
+                      MK {(salesAnalysis?.monthlyRevenue || 0).toLocaleString('en-IN')}
+                    </p>
+                  </div>
                 </div>
-                <div className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
-                  <h3 className="text-white/70 text-sm mb-1">Total Revenue</h3>
-                  <p className="text-2xl font-bold text-green-400">
-                    MK {(getFilteredSales()?.reduce((total, sale) => 
-                      total + (Number(sale.finalSalePrice) || 0), 0) || 0).toLocaleString('en-IN')}
-                  </p>
-                </div>
-                <div className="bg-white/5 rounded-lg p-4 hover:bg-white/10 transition-colors">
-                  <h3 className="text-white/70 text-sm mb-1">Monthly Revenue</h3>
-                  <p className="text-2xl font-bold text-blue-400">
-                    MK {(salesAnalysis?.monthlyRevenue || 0).toLocaleString('en-IN')}
-                  </p>
-                </div>
-              </div>
 
-              {/* Sales Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-white">
-                  <thead>
-                    <tr className="border-b border-white/20">
-                      <th className="text-left py-3 px-2">Item</th>
-                      {selectedLocation === 'all' && <th className="text-left py-3 px-2">Location</th>}
-                      <th className="text-left py-3 px-2">Sold By</th>
-                      <th className="text-left py-3 px-2">Final Price</th>
-                      <th className="text-left py-3 px-2">Date</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {getFilteredSales()?.length > 0 ? (
-                      getFilteredSales().map((sale) => (
-                        <tr key={sale.id || `${sale.itemCode}-${sale.soldAt}`} 
-                            className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                          <td className="py-3 px-2">
-                            <div className="font-medium">
-                              {(sale.brand || 'Unknown')} {sale.model || ''}
+                {/* Sales Table */}
+                <div className="overflow-x-auto">
+                  <table className="w-full text-white">
+                    <thead>
+                      <tr className="border-b border-white/20">
+                        <th className="text-left py-3 px-2">Item</th>
+                        {selectedLocation === 'all' && <th className="text-left py-3 px-2">Location</th>}
+                        <th className="text-left py-3 px-2">Sold By</th>
+                        <th className="text-left py-3 px-2">Final Price</th>
+                        <th className="text-left py-3 px-2">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getFilteredSales()?.length > 0 ? (
+                        getFilteredSales().map((sale, index) => {
+                          // Create a stable unique key
+                          const stableKey = sale.id || 
+                            (sale.itemCode && sale.soldAt 
+                              ? `${sale.itemCode}_${sale.soldAt.seconds || sale.soldAt}_${index}` 
+                              : `sale_${index}_${sale.soldAt || Date.now()}`);
+
+                          // Format the date safely
+                          let formattedDate = 'Unknown date';
+                          if (sale.soldAt) {
+                            try {
+                              let dateObj;
+                              if (typeof sale.soldAt.toDate === 'function') {
+                                dateObj = sale.soldAt.toDate();
+                              } else if (sale.soldAt instanceof Date) {
+                                dateObj = sale.soldAt;
+                              } else if (sale.soldAt.seconds) {
+                                // Handle Firebase timestamp
+                                dateObj = new Date(sale.soldAt.seconds * 1000);
+                              } else if (typeof sale.soldAt === 'string') {
+                                dateObj = new Date(sale.soldAt);
+                              }
+                              
+                              if (dateObj && !isNaN(dateObj.getTime())) {
+                                formattedDate = dateObj.toLocaleDateString('en-IN', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  year: 'numeric'
+                                });
+                              }
+                            } catch (error) {
+                              console.error('Error formatting date:', error);
+                            }
+                          }
+
+                          // Calculate column span for empty state
+                          const colSpan = selectedLocation === 'all' ? 5 : 4;
+
+                          return (
+                            <tr key={stableKey} 
+                                className="border-b border-white/10 hover:bg-white/5 transition-colors">
+                              <td className="py-3 px-2">
+                                <div className="font-medium">
+                                  {(sale.brand || 'Unknown')} {sale.model || ''}
+                                </div>
+                                <div className="text-white/60 text-sm">
+                                  Code: {sale.itemCode || 'N/A'}
+                                </div>
+                              </td>
+                              
+                              {selectedLocation === 'all' && (
+                                <td className="py-3 px-2">
+                                  <span className="bg-white/10 px-3 py-1 rounded-full text-sm">
+                                    {sale.location || 'Unknown'}
+                                  </span>
+                                </td>
+                              )}
+                              
+                              <td className="py-3 px-2">
+                                {sale.soldByName || sale.soldBy || 'Unknown'}
+                              </td>
+                              
+                              <td className="py-3 px-2">
+                                <span className="font-semibold text-green-300">
+                                  MK {(Number(sale.finalSalePrice) || 0).toLocaleString('en-IN')}
+                                </span>
+                              </td>
+                              
+                              <td className="py-3 px-2 text-sm">
+                                {formattedDate}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={selectedLocation === 'all' ? 5 : 4} 
+                              className="py-8 text-center text-white/50">
+                            <div className="flex flex-col items-center justify-center">
+                              <div className="text-4xl mb-3">📈</div>
+                              No sales data available
+                              <div className="text-white/40 text-sm mt-1">
+                                {selectedLocation === 'all' 
+                                  ? 'No sales across all locations' 
+                                  : `No sales at ${selectedLocation}`}
+                              </div>
                             </div>
-                            <div className="text-white/60 text-sm">
-                              Code: {sale.itemCode || 'N/A'}
-                            </div>
-                          </td>
-                          
-                          {selectedLocation === 'all' && (
-                            <td className="py-3 px-2">
-                              <span className="bg-white/10 px-3 py-1 rounded-full text-sm">
-                                {sale.location || 'Unknown'}
-                              </span>
-                            </td>
-                          )}
-                          
-                          <td className="py-3 px-2">
-                            {sale.soldByName || sale.soldBy || 'Unknown'}
-                          </td>
-                          
-                          <td className="py-3 px-2">
-                            <span className="font-semibold text-green-300">
-                              MK {(Number(sale.finalSalePrice) || 0).toLocaleString('en-IN')}
-                            </span>
-                          </td>
-                          
-                          <td className="py-3 px-2 text-sm">
-                            {sale.soldAt?.toDate?.().toLocaleDateString('en-IN', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric'
-                            }) || 'Unknown date'}
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={selectedLocation === 'all' ? 5 : 4} 
-                            className="py-8 text-center text-white/50">
-                          <div className="flex flex-col items-center justify-center">
-                            <div className="text-4xl mb-3">📈</div>
-                            No sales data available
-                            <div className="text-white/40 text-sm mt-1">
-                              {selectedLocation === 'all' 
-                                ? 'No sales across all locations' 
-                                : `No sales at ${selectedLocation}`}
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Stock Transfer Tab */}
           {activeTab === 'transfer' && (

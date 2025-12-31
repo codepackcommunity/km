@@ -1556,76 +1556,111 @@ return (
         )}
 
         {/* Sales Analysis Tab */}
-        {activeTab === 'sales' && (
-          <div className={'bg-white/5 backdrop-blur-lg rounded-lg border border-white/10 p-6'}>
-            <h2 className={'text-xl font-semibold text-white mb-4'}>
-              Sales Analysis - {selectedLocation === 'all' ? 'All Locations' : selectedLocation}
-            </h2>
-            
-            <div className={'grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'}>
-              <div className={'bg-white/5 rounded-lg p-4'}>
-                <h3 className={'text-white/70 text-sm'}>Total Sales</h3>
-                <p className={'text-2xl font-bold text-white'}>{salesAnalysis.totalSales}</p>
+          {activeTab === 'sales' && (
+            <div className={'bg-white/5 backdrop-blur-lg rounded-lg border border-white/10 p-6'}>
+              <h2 className={'text-xl font-semibold text-white mb-4'}>
+                Sales Analysis - {selectedLocation === 'all' ? 'All Locations' : selectedLocation}
+              </h2>
+              
+              <div className={'grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'}>
+                <div className={'bg-white/5 rounded-lg p-4'}>
+                  <h3 className={'text-white/70 text-sm'}>Total Sales</h3>
+                  <p className={'text-2xl font-bold text-white'}>{salesAnalysis.totalSales || 0}</p>
+                </div>
+                <div className={'bg-white/5 rounded-lg p-4'}>
+                  <h3 className={'text-white/70 text-sm'}>Total Revenue</h3>
+                  <p className={'text-2xl font-bold text-green-400'}>
+                    MK {(salesAnalysis.totalRevenue || 0).toLocaleString('en-IN')}
+                  </p>
+                </div>
+                <div className={'bg-white/5 rounded-lg p-4'}>
+                  <h3 className={'text-white/70 text-sm'}>Monthly Revenue</h3>
+                  <p className={'text-2xl font-bold text-blue-400'}>
+                    MK {(salesAnalysis.monthlyRevenue || 0).toLocaleString('en-IN')}
+                  </p>
+                </div>
               </div>
-              <div className={'bg-white/5 rounded-lg p-4'}>
-                <h3 className={'text-white/70 text-sm'}>Total Revenue</h3>
-                <p className={'text-2xl font-bold text-green-400'}>
-                  MK {salesAnalysis.totalRevenue?.toLocaleString() || 0}
-                </p>
-              </div>
-              <div className={'bg-white/5 rounded-lg p-4'}>
-                <h3 className={'text-white/70 text-sm'}>Monthly Revenue</h3>
-                <p className={'text-2xl font-bold text-blue-400'}>
-                  MK {salesAnalysis.monthlyRevenue?.toLocaleString() || 0}
-                </p>
-              </div>
-            </div>
 
-            <div className="overflow-x-auto">
-            <table className="w-full text-white">
-              <thead>
-                <tr className="border-b border-white/20">
-                  <th className="text-left py-2">Item</th>
-                  <th className="text-left py-2">Location</th>
-                  <th className="text-left py-2">Sold By</th>
-                  <th className="text-left py-2">Final Price</th>
-                  <th className="text-left py-2">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {getFilteredSales()?.length > 0 ? (
-                  getFilteredSales().map((sale) => (
-                    <tr key={sale.id} className="border-b border-white/10 hover:bg-white/5">
-                      <td className="py-3">
-                        {sale.brand || ''} {sale.model || ''} 
-                        {sale.itemCode ? ` (${sale.itemCode})` : ''}
-                      </td>
-                      <td className="py-3">{sale.location || 'Unknown'}</td>
-                      <td className="py-3">{sale.soldByName || sale.soldBy || 'Unknown'}</td>
-                      <td className="py-3 font-medium">
-                        MK {(sale.finalSalePrice || 0).toLocaleString()}
-                      </td>
-                      <td className="py-3">
-                        {sale.soldAt?.toDate?.().toLocaleDateString('en-IN', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric'
-                        }) || 'Unknown date'}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="w-full text-white">
+                  <thead>
+                    <tr className="border-b border-white/20">
+                      <th className="text-left py-2">Item</th>
+                      <th className="text-left py-2">Location</th>
+                      <th className="text-left py-2">Sold By</th>
+                      <th className="text-left py-2">Final Price</th>
+                      <th className="text-left py-2">Date</th>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan="5" className="py-8 text-center text-white/50">
-                      No sales records found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>  
-          </div>
-        )}
+                  </thead>
+                  <tbody>
+                    {getFilteredSales()?.length > 0 ? (
+                      getFilteredSales().map((sale, index) => {
+                        // Create a stable unique key
+                        const stableKey = sale.id || 
+                          (sale.itemCode && sale.soldAt 
+                            ? `${sale.itemCode}_${sale.soldAt.seconds || sale.soldAt}_${index}` 
+                            : `sale_${index}_${sale.soldAt || Date.now()}`);
+                        
+                        // Format the date safely
+                        let formattedDate = 'Unknown date';
+                        if (sale.soldAt) {
+                          try {
+                            if (typeof sale.soldAt.toDate === 'function') {
+                              const dateObj = sale.soldAt.toDate();
+                              formattedDate = dateObj.toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              });
+                            } else if (sale.soldAt instanceof Date) {
+                              formattedDate = sale.soldAt.toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              });
+                            } else if (sale.soldAt.seconds) {
+                              // Handle Firebase timestamp
+                              const dateObj = new Date(sale.soldAt.seconds * 1000);
+                              formattedDate = dateObj.toLocaleDateString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                              });
+                            }
+                          } catch (error) {
+                            console.error('Error formatting date:', error);
+                          }
+                        }
+
+                        return (
+                          <tr key={stableKey} className="border-b border-white/10 hover:bg-white/5">
+                            <td className="py-3">
+                              {sale.brand || 'Unknown'} {sale.model || ''} 
+                              {sale.itemCode ? ` (${sale.itemCode})` : ''}
+                            </td>
+                            <td className="py-3">{sale.location || 'Unknown'}</td>
+                            <td className="py-3">{sale.soldByName || sale.soldBy || 'Unknown'}</td>
+                            <td className="py-3 font-medium">
+                              MK {(sale.finalSalePrice || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-3">
+                              {formattedDate}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className="py-8 text-center text-white/50">
+                          No sales records found
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>  
+            </div>
+          )}
 
         {/* Stock Transfer Tab */}
         {activeTab === 'transfer' && (
