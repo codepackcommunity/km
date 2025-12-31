@@ -44,7 +44,21 @@ export default function UserDashboard() {
   const userRef = useRef(null);
   const locationRef = useRef("");
 
-  // Wrap handleUserAuth in useCallback to prevent infinite re-renders
+  // Wrap initializeDashboard in useCallback with proper dependencies
+  const initializeDashboard = useCallback(async (userData) => {
+    try {
+      console.log("Initializing dashboard for location:", userData.location);
+      await Promise.all([
+        fetchStocks(userData.location),
+        fetchSalesAnalysis(userData.location, userData.uid)
+      ]);
+      setupRealtimeListeners(userData.location, userData.uid);
+    } catch (error) {
+      console.error("Error initializing dashboard:", error);
+    }
+  }, []);
+
+  // Wrap handleUserAuth in useCallback with proper dependencies
   const handleUserAuth = useCallback(async (firebaseUser) => {
     try {
       console.log("Authenticating user:", firebaseUser.uid);
@@ -77,42 +91,15 @@ export default function UserDashboard() {
       console.error("Authentication error:", error);
       router.push("/login");
     }
-  }, [router]);
+  }, [router, initializeDashboard]); // Added initializeDashboard as dependency
 
-  // Wrap initializeDashboard in useCallback
-  const initializeDashboard = useCallback(async (userData) => {
-    try {
-      console.log("Initializing dashboard for location:", userData.location);
-      await Promise.all([
-        fetchStocks(userData.location),
-        fetchSalesAnalysis(userData.location, userData.uid)
-      ]);
-      setupRealtimeListeners(userData.location, userData.uid);
-    } catch (error) {
-      console.error("Error initializing dashboard:", error);
-    }
-  }, []);
-
-  // Authentication and initialization
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        await handleUserAuth(firebaseUser);
-      } else {
-        router.push("/login");
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router, handleUserAuth]);
-
-  const setupRealtimeListeners = (location, userId) => {
+  // Wrap setupRealtimeListeners in useCallback
+  const setupRealtimeListeners = useCallback((location, userId) => {
     console.log("Setting up realtime listeners for location:", location, "user:", userId);
     
     if (!location || !userId) {
       console.error("Invalid parameters for listeners:", { location, userId });
-      return;
+      return () => {}; // Return empty cleanup function
     }
 
     // Real-time stock updates for user's location only
@@ -162,36 +149,10 @@ export default function UserDashboard() {
       unsubscribeStocks();
       unsubscribeSales();
     };
-  };
+  }, []); // Added dependencies: setStocks, setSales
 
-  // Data fetching functions with better error handling
-  const fetchStocks = async (location) => {
-    try {
-      console.log("Fetching stocks for location:", location);
-      
-      if (!location) {
-        console.error("No location provided for stocks fetch");
-        return;
-      }
-
-      const q = query(
-        collection(db, "stocks"),
-        where("location", "==", location)
-      );
-      const querySnapshot = await getDocs(q);
-      const stocksData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      console.log("Fetched stocks:", stocksData.length);
-      setStocks(stocksData);
-    } catch (error) {
-      console.error("Error fetching stocks:", error);
-      alert("Error loading stock data. Please refresh the page.");
-    }
-  };
-
-  const fetchSalesAnalysis = async (location, userId) => {
+  // Wrap fetchSalesAnalysis in useCallback
+  const fetchSalesAnalysis = useCallback(async (location, userId) => {
     try {
       console.log("Fetching sales for location:", location, "user:", userId);
       
@@ -217,9 +178,10 @@ export default function UserDashboard() {
       console.error("Error fetching sales:", error);
       alert("Error loading sales data. Please refresh the page.");
     }
-  };
+  }, [setSales]); // Added setSales as dependency
 
-  const calculateSalesAnalysis = (salesData) => {
+  // Wrap calculateSalesAnalysis in useCallback
+  const calculateSalesAnalysis = useCallback((salesData) => {
     const analysis = {
       totalSales: 0,
       totalRevenue: 0,
@@ -244,7 +206,48 @@ export default function UserDashboard() {
     });
 
     setSalesAnalysis(analysis);
-  };
+  }, [setSalesAnalysis]); // Added setSalesAnalysis as dependency
+
+  // Wrap fetchStocks in useCallback
+  const fetchStocks = useCallback(async (location) => {
+    try {
+      console.log("Fetching stocks for location:", location);
+      
+      if (!location) {
+        console.error("No location provided for stocks fetch");
+        return;
+      }
+
+      const q = query(
+        collection(db, "stocks"),
+        where("location", "==", location)
+      );
+      const querySnapshot = await getDocs(q);
+      const stocksData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log("Fetched stocks:", stocksData.length);
+      setStocks(stocksData);
+    } catch (error) {
+      console.error("Error fetching stocks:", error);
+      alert("Error loading stock data. Please refresh the page.");
+    }
+  }, [setStocks]); // Added setStocks as dependency
+
+  // Authentication and initialization
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        await handleUserAuth(firebaseUser);
+      } else {
+        router.push("/login");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router, handleUserAuth]);
 
   // Enhanced Sales functions with better error handling
   const handleQuickSale = async () => {

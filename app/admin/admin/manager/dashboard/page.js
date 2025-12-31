@@ -70,41 +70,41 @@ export default function ManagerDashboard() {
   const [processingRequest, setProcessingRequest] = useState(null);
   const [timePeriod, setTimePeriod] = useState("today");
 
-  // Performance Helpers - moved up to be used in other functions
-  const getPerformanceGrade = (score) => {
+  // Performance Helpers - moved inside useCallback to fix dependency issue
+  const getPerformanceGrade = useCallback((score) => {
     if (score >= 90) return "Excellent";
     if (score >= 80) return "Very Good";
     if (score >= 70) return "Good";
     if (score >= 60) return "Average";
     if (score >= 50) return "Below Average";
     return "Needs Attention";
-  };
+  }, []);
 
-  const getPerformanceColor = (score) => {
+  const getPerformanceColor = useCallback((score) => {
     if (score >= 80) return "text-green-400";
     if (score >= 60) return "text-yellow-400";
     if (score >= 40) return "text-orange-400";
     return "text-red-400";
-  };
+  }, []);
 
-  const getPerformanceBadge = (score) => {
+  const getPerformanceBadge = useCallback((score) => {
     if (score >= 80) return "bg-green-500/20 text-green-300";
     if (score >= 60) return "bg-yellow-500/20 text-yellow-300";
     if (score >= 40) return "bg-orange-500/20 text-orange-300";
     return "bg-red-500/20 text-red-300";
-  };
+  }, []);
 
-  const getTrendIcon = (trend) => {
+  const getTrendIcon = useCallback((trend) => {
     if (trend === "up") return "↗";
     if (trend === "down") return "↘";
     return "→";
-  };
+  }, []);
 
-  const getTrendColor = (trend) => {
+  const getTrendColor = useCallback((trend) => {
     if (trend === "up") return "text-green-400";
     if (trend === "down") return "text-red-400";
     return "text-gray-400";
-  };
+  }, []);
 
   // Core Data Fetching Functions
   const fetchAllUsers = useCallback(async () => {
@@ -431,7 +431,7 @@ export default function ManagerDashboard() {
       return;
     }
 
-    // Prevent manager from changing other managers', admins', or superadmins' roles
+    // Prevent manager from changing other managers&apos;, admins&apos;, or superadmins&apos; roles
     if (restrictedRoles.includes(currentUserRole)) {
       alert("You are not authorized to modify roles of managers, admins, or superadmins.");
       return;
@@ -806,7 +806,7 @@ export default function ManagerDashboard() {
       </div>
     );
   }
-  
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}

@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase/config";
@@ -82,234 +82,43 @@ export default function SuperAdminDashboard() {
   const [processingUser, setProcessingUser] = useState(null);
   const [timePeriod, setTimePeriod] = useState("today");
 
-  // Memoized functions to prevent infinite re-renders
-  const fetchAllUsers = useCallback(async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "users"));
-      const users = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setAllUsers(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  }, []);
+  // Performance Helpers (moved outside to prevent dependency issues)
+  const getPerformanceGrade = (score) => {
+    if (score >= 90) return "Excellent";
+    if (score >= 80) return "Very Good";
+    if (score >= 70) return "Good";
+    if (score >= 60) return "Average";
+    if (score >= 50) return "Below Average";
+    return "Needs Attention";
+  };
 
-  const fetchAllStocks = useCallback(async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "stocks"));
-      const stocksData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setStocks(stocksData);
-    } catch (error) {
-      console.error("Error fetching stocks:", error);
-    }
-  }, []);
+  const getPerformanceColor = (score) => {
+    if (score >= 80) return "text-green-400";
+    if (score >= 60) return "text-yellow-400";
+    if (score >= 40) return "text-orange-400";
+    return "text-red-400";
+  };
 
-  const fetchAllSalesAnalysis = useCallback(async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "sales"));
-      const salesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setSales(salesData);
-      calculateSalesAnalysis(salesData);
-    } catch (error) {
-      console.error("Error fetching sales:", error);
-    }
-  }, []);
+  const getPerformanceBadge = (score) => {
+    if (score >= 80) return "bg-green-500/20 text-green-300";
+    if (score >= 60) return "bg-yellow-500/20 text-yellow-300";
+    if (score >= 40) return "bg-orange-500/20 text-orange-300";
+    return "bg-red-500/20 text-red-300";
+  };
 
-  const fetchAllStockRequests = useCallback(async () => {
-    try {
-      const q = query(
-        collection(db, "stockRequests"),
-        where("status", "==", "pending")
-      );
-      const querySnapshot = await getDocs(q);
-      const requestsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setStockRequests(requestsData);
-    } catch (error) {
-      console.error("Error fetching stock requests:", error);
-    }
-  }, []);
+  const getTrendIcon = (trend) => {
+    if (trend === "up") return "↗";
+    if (trend === "down") return "↘";
+    return "→";
+  };
 
-  const fetchApprovalSettings = useCallback(async () => {
-    try {
-      const settingsDoc = await getDocs(collection(db, "approvalSettings"));
-      if (!settingsDoc.empty) {
-        const settings = settingsDoc.docs[0].data();
-        setApprovalSettings(settings);
-      }
-    } catch (error) {
-      console.error("Error fetching approval settings:", error);
-    }
-  }, []);
+  const getTrendColor = (trend) => {
+    if (trend === "up") return "text-green-400";
+    if (trend === "down") return "text-red-400";
+    return "text-gray-400";
+  };
 
-  const fetchUserApprovals = useCallback(async () => {
-    try {
-      // Fetch pending users
-      const q = query(
-        collection(db, "users"),
-        where("status", "==", "pending")
-      );
-      const querySnapshot = await getDocs(q);
-      const pendingUsersData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setPendingUsers(pendingUsersData);
-      
-      // Fetch recently approved/rejected users for history
-      const historyQ = query(
-        collection(db, "users"),
-        where("status", "in", ["approved", "rejected"])
-      );
-      const historySnapshot = await getDocs(historyQ);
-      const historyData = historySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setUserApprovals(historyData);
-      
-    } catch (error) {
-      console.error("Error fetching user approvals:", error);
-      alert("Error loading user approvals. Please refresh the page.");
-    }
-  }, []);
-
-  const calculateSalesAnalysis = useCallback((salesData) => {
-    const analysis = {
-      totalSales: 0,
-      totalRevenue: 0,
-      monthlyRevenue: 0,
-      topProducts: {},
-      salesByUser: {},
-      revenueByLocation: {},
-      locationPerformance: salesAnalysis.locationPerformance
-    };
-
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    salesData.forEach(sale => {
-      analysis.totalRevenue += sale.finalSalePrice || 0;
-      analysis.totalSales++;
-
-      const saleDate = sale.soldAt?.toDate();
-      if (saleDate && saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
-        analysis.monthlyRevenue += sale.finalSalePrice || 0;
-      }
-
-      const productKey = `${sale.brand}-${sale.model}`;
-      analysis.topProducts[productKey] = (analysis.topProducts[productKey] || 0) + 1;
-
-      const userName = sale.soldByName || sale.soldBy;
-      analysis.salesByUser[userName] = (analysis.salesByUser[userName] || 0) + (sale.finalSalePrice || 0);
-
-      const location = sale.location || "Unknown";
-      analysis.revenueByLocation[location] = (analysis.revenueByLocation[location] || 0) + (sale.finalSalePrice || 0);
-    });
-
-    setSalesAnalysis(analysis);
-  }, [salesAnalysis.locationPerformance]);
-
-  const initializeDashboard = useCallback(async () => {
-    try {
-      await Promise.all([
-        fetchAllUsers(),
-        fetchAllStocks(),
-        fetchAllSalesAnalysis(),
-        fetchAllStockRequests(),
-        fetchApprovalSettings(),
-        fetchUserApprovals()
-      ]);
-      setupRealtimeListeners();
-    } catch (error) {
-      console.error("Error initializing dashboard:", error);
-    }
-  }, [
-    fetchAllUsers,
-    fetchAllStocks,
-    fetchAllSalesAnalysis,
-    fetchAllStockRequests,
-    fetchApprovalSettings,
-    fetchUserApprovals
-  ]);
-
-  const setupRealtimeListeners = useCallback(() => {
-    if (!user) return;
-
-    // Real-time stock updates
-    const stocksQuery = query(collection(db, "stocks"));
-    
-    const unsubscribeStocks = onSnapshot(stocksQuery, (snapshot) => {
-      const stocksData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setStocks(stocksData);
-    });
-
-    // Real-time sales updates
-    const salesQuery = query(
-      collection(db, "sales"),
-      orderBy("soldAt", "desc")
-    );
-
-    const unsubscribeSales = onSnapshot(salesQuery, (snapshot) => {
-      const salesData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setSales(salesData);
-      calculateSalesAnalysis(salesData);
-      calculateRealTimeSales(salesData);
-      calculateLocationPerformance(salesData);
-    });
-
-    // Real-time stock requests
-    const requestsQuery = query(
-      collection(db, "stockRequests"),
-      where("status", "==", "pending")
-    );
-
-    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
-      const requestsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setStockRequests(requestsData);
-    });
-
-    // Real-time user approvals
-    const pendingUsersQuery = query(
-      collection(db, "users"),
-      where("status", "==", "pending")
-    );
-
-    const unsubscribeUsers = onSnapshot(pendingUsersQuery, (snapshot) => {
-      const pendingUsersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setPendingUsers(pendingUsersData);
-    });
-
-    return () => {
-      unsubscribeStocks();
-      unsubscribeSales();
-      unsubscribeRequests();
-      unsubscribeUsers();
-    };
-  }, [user, calculateSalesAnalysis]);
-
+  // Calculate real-time sales
   const calculateRealTimeSales = useCallback((salesData) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -338,6 +147,7 @@ export default function SuperAdminDashboard() {
     });
   }, []);
 
+  // Calculate location performance
   const calculateLocationPerformance = useCallback((salesData) => {
     const locationMetrics = {};
     const today = new Date();
@@ -428,41 +238,234 @@ export default function SuperAdminDashboard() {
     }));
   }, []);
 
-  // Performance Helpers
-  const getPerformanceGrade = (score) => {
-    if (score >= 90) return "Excellent";
-    if (score >= 80) return "Very Good";
-    if (score >= 70) return "Good";
-    if (score >= 60) return "Average";
-    if (score >= 50) return "Below Average";
-    return "Needs Attention";
-  };
+  // Calculate sales analysis
+  const calculateSalesAnalysis = useCallback((salesData) => {
+    const analysis = {
+      totalSales: 0,
+      totalRevenue: 0,
+      monthlyRevenue: 0,
+      topProducts: {},
+      salesByUser: {},
+      revenueByLocation: {},
+      locationPerformance: salesAnalysis.locationPerformance
+    };
 
-  const getPerformanceColor = (score) => {
-    if (score >= 80) return "text-green-400";
-    if (score >= 60) return "text-yellow-400";
-    if (score >= 40) return "text-orange-400";
-    return "text-red-400";
-  };
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
 
-  const getPerformanceBadge = (score) => {
-    if (score >= 80) return "bg-green-500/20 text-green-300";
-    if (score >= 60) return "bg-yellow-500/20 text-yellow-300";
-    if (score >= 40) return "bg-orange-500/20 text-orange-300";
-    return "bg-red-500/20 text-red-300";
-  };
+    salesData.forEach(sale => {
+      analysis.totalRevenue += sale.finalSalePrice || 0;
+      analysis.totalSales++;
 
-  const getTrendIcon = (trend) => {
-    if (trend === "up") return "↗";
-    if (trend === "down") return "↘";
-    return "→";
-  };
+      const saleDate = sale.soldAt?.toDate();
+      if (saleDate && saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
+        analysis.monthlyRevenue += sale.finalSalePrice || 0;
+      }
 
-  const getTrendColor = (trend) => {
-    if (trend === "up") return "text-green-400";
-    if (trend === "down") return "text-red-400";
-    return "text-gray-400";
-  };
+      const productKey = `${sale.brand}-${sale.model}`;
+      analysis.topProducts[productKey] = (analysis.topProducts[productKey] || 0) + 1;
+
+      const userName = sale.soldByName || sale.soldBy;
+      analysis.salesByUser[userName] = (analysis.salesByUser[userName] || 0) + (sale.finalSalePrice || 0);
+
+      const location = sale.location || "Unknown";
+      analysis.revenueByLocation[location] = (analysis.revenueByLocation[location] || 0) + (sale.finalSalePrice || 0);
+    });
+
+    setSalesAnalysis(analysis);
+  }, [salesAnalysis.locationPerformance]);
+
+  const fetchAllUsers = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const users = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, []);
+
+  const fetchAllStocks = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "stocks"));
+      const stocksData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setStocks(stocksData);
+    } catch (error) {
+      console.error("Error fetching stocks:", error);
+    }
+  }, []);
+
+  const fetchAllSalesAnalysis = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "sales"));
+      const salesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSales(salesData);
+      calculateSalesAnalysis(salesData);
+    } catch (error) {
+      console.error("Error fetching sales:", error);
+    }
+  }, [calculateSalesAnalysis]);
+
+  const fetchAllStockRequests = useCallback(async () => {
+    try {
+      const q = query(
+        collection(db, "stockRequests"),
+        where("status", "==", "pending")
+      );
+      const querySnapshot = await getDocs(q);
+      const requestsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setStockRequests(requestsData);
+    } catch (error) {
+      console.error("Error fetching stock requests:", error);
+    }
+  }, []);
+
+  const fetchApprovalSettings = useCallback(async () => {
+    try {
+      const settingsDoc = await getDocs(collection(db, "approvalSettings"));
+      if (!settingsDoc.empty) {
+        const settings = settingsDoc.docs[0].data();
+        setApprovalSettings(settings);
+      }
+    } catch (error) {
+      console.error("Error fetching approval settings:", error);
+    }
+  }, []);
+
+  const fetchUserApprovals = useCallback(async () => {
+    try {
+      // Fetch pending users
+      const q = query(
+        collection(db, "users"),
+        where("status", "==", "pending")
+      );
+      const querySnapshot = await getDocs(q);
+      const pendingUsersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPendingUsers(pendingUsersData);
+      
+      // Fetch recently approved/rejected users for history
+      const historyQ = query(
+        collection(db, "users"),
+        where("status", "in", ["approved", "rejected"])
+      );
+      const historySnapshot = await getDocs(historyQ);
+      const historyData = historySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setUserApprovals(historyData);
+      
+    } catch (error) {
+      console.error("Error fetching user approvals:", error);
+      alert("Error loading user approvals. Please refresh the page.");
+    }
+  }, []);
+
+  const setupRealtimeListeners = useCallback(() => {
+    if (!user) return;
+
+    // Real-time stock updates
+    const stocksQuery = query(collection(db, "stocks"));
+    
+    const unsubscribeStocks = onSnapshot(stocksQuery, (snapshot) => {
+      const stocksData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setStocks(stocksData);
+    });
+
+    // Real-time sales updates
+    const salesQuery = query(
+      collection(db, "sales"),
+      orderBy("soldAt", "desc")
+    );
+
+    const unsubscribeSales = onSnapshot(salesQuery, (snapshot) => {
+      const salesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSales(salesData);
+      calculateSalesAnalysis(salesData);
+      calculateRealTimeSales(salesData);
+      calculateLocationPerformance(salesData);
+    });
+
+    // Real-time stock requests
+    const requestsQuery = query(
+      collection(db, "stockRequests"),
+      where("status", "==", "pending")
+    );
+
+    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+      const requestsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setStockRequests(requestsData);
+    });
+
+    // Real-time user approvals
+    const pendingUsersQuery = query(
+      collection(db, "users"),
+      where("status", "==", "pending")
+    );
+
+    const unsubscribeUsers = onSnapshot(pendingUsersQuery, (snapshot) => {
+      const pendingUsersData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPendingUsers(pendingUsersData);
+    });
+
+    return () => {
+      unsubscribeStocks();
+      unsubscribeSales();
+      unsubscribeRequests();
+      unsubscribeUsers();
+    };
+  }, [user, calculateSalesAnalysis, calculateRealTimeSales, calculateLocationPerformance]);
+
+  const initializeDashboard = useCallback(async () => {
+    try {
+      await Promise.all([
+        fetchAllUsers(),
+        fetchAllStocks(),
+        fetchAllSalesAnalysis(),
+        fetchAllStockRequests(),
+        fetchApprovalSettings(),
+        fetchUserApprovals()
+      ]);
+      setupRealtimeListeners();
+    } catch (error) {
+      console.error("Error initializing dashboard:", error);
+    }
+  }, [
+    fetchAllUsers,
+    fetchAllStocks,
+    fetchAllSalesAnalysis,
+    fetchAllStockRequests,
+    fetchApprovalSettings,
+    fetchUserApprovals,
+    setupRealtimeListeners
+  ]);
 
   // Approval System Functions
   const saveApprovalSettings = async () => {
