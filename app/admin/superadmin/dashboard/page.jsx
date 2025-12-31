@@ -284,7 +284,7 @@ export default function SuperAdminDashboard() {
       }));
       setAllUsers(users);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching users:');
     }
   }, []);
 
@@ -297,7 +297,7 @@ export default function SuperAdminDashboard() {
       }));
       setStocks(stocksData);
     } catch (error) {
-      console.error('Error fetching stocks:', error);
+      console.error('Error fetching stocks:');
     }
   }, []);
 
@@ -311,7 +311,7 @@ export default function SuperAdminDashboard() {
       setSales(salesData);
       calculateSalesAnalysis(salesData);
     } catch (error) {
-      console.error('Error fetching sales:', error);
+      console.error('Error fetching sales:');
     }
   }, [calculateSalesAnalysis]);
 
@@ -328,7 +328,7 @@ export default function SuperAdminDashboard() {
       }));
       setStockRequests(requestsData);
     } catch (error) {
-      console.error('Error fetching stock requests:', error);
+      console.error('Error fetching stock requests:');
     }
   }, []);
 
@@ -340,7 +340,7 @@ export default function SuperAdminDashboard() {
         setApprovalSettings(settings);
       }
     } catch (error) {
-      console.error('Error fetching approval settings:', error);
+      console.error('Error fetching approval settings:');
     }
   }, []);
 
@@ -371,7 +371,7 @@ export default function SuperAdminDashboard() {
       setUserApprovals(historyData);
       
     } catch (error) {
-      console.error('Error fetching user approvals:', error);
+      console.error('Error fetching user approvals:');
       alert('Error loading user approvals. Please refresh the page.');
     }
   }, []);
@@ -455,7 +455,7 @@ export default function SuperAdminDashboard() {
       ]);
       setupRealtimeListeners();
     } catch (error) {
-      console.error('Error initializing dashboard:', error);
+      console.error('Error initializing dashboard:');
     }
   }, [
     fetchAllUsers,
@@ -486,7 +486,7 @@ export default function SuperAdminDashboard() {
       }
       alert('Approval settings saved successfully!');
     } catch (error) {
-      console.error('Error saving approval settings:', error);
+      console.error('Error saving approval settings:');
       alert('Error saving approval settings.');
     }
   };
@@ -537,7 +537,7 @@ export default function SuperAdminDashboard() {
       await fetchUserApprovals();
       
     } catch (error) {
-      console.error('Error approving user:', error);
+      console.error('Error approving user:');
       
       if (error.code === 'permission-denied') {
         alert('Permission denied. Please check your Firestore security rules.');
@@ -596,7 +596,7 @@ export default function SuperAdminDashboard() {
       alert('User rejected successfully!');
       await fetchUserApprovals();
     } catch (error) {
-      console.error('Error rejecting user:', error);
+      console.error('Error rejecting user:');
       
       if (error.code === 'permission-denied') {
         alert('Permission denied. Please check your Firestore security rules.');
@@ -744,7 +744,7 @@ export default function SuperAdminDashboard() {
 
       alert('Stock request approved and transferred successfully!');
     } catch (error) {
-      console.error('Error approving stock request:', error);
+      console.error('Error approving stock request:');
       
       try {
         await updateDoc(doc(db, 'stockRequests', requestId), {
@@ -791,7 +791,7 @@ export default function SuperAdminDashboard() {
 
       alert('Stock request rejected!');
     } catch (error) {
-      console.error('Error rejecting stock request:', error);
+      console.error('Error rejecting stock request:');
       alert('Error rejecting stock request. Please try again.');
     }
   };
@@ -834,7 +834,7 @@ export default function SuperAdminDashboard() {
       fetchAllUsers();
       alert(`Role updated to ${role} successfully!`);
     } catch (error) {
-      console.error('Error assigning role:', error);
+      console.error('Error assigning role:');
       alert('Error updating role. Please try again.');
     }
   };
@@ -849,7 +849,7 @@ export default function SuperAdminDashboard() {
       fetchAllUsers();
       alert('User location updated successfully!');
     } catch (error) {
-      console.error('Error updating user location:', error);
+      console.error('Error updating user location:');
       alert('Error updating user location. Please try again.');
     }
   };
@@ -891,7 +891,7 @@ export default function SuperAdminDashboard() {
       
       alert('Stock added successfully!');
     } catch (error) {
-      console.error('Error adding stock:', error);
+      console.error('Error adding stock:');
       alert('Error adding stock. Please try again.');
     }
   };
@@ -905,7 +905,7 @@ export default function SuperAdminDashboard() {
       });
       alert('Stock updated successfully!');
     } catch (error) {
-      console.error('Error updating stock:', error);
+      console.error('Error updating stock:');
       alert('Error updating stock. Please try again.');
     }
   };
@@ -937,7 +937,7 @@ export default function SuperAdminDashboard() {
       
       alert('Stock request sent successfully!');
     } catch (error) {
-      console.error('Error requesting stock:', error);
+      console.error('Error requesting stock:');
       alert('Error requesting stock. Please try again.');
     }
   };
@@ -984,7 +984,7 @@ export default function SuperAdminDashboard() {
             router.push('/login');
           }
         } catch (error) {
-          console.error('Error during authentication:', error);
+          console.error('Error during authentication:');
           router.push('/login');
         }
       } else {

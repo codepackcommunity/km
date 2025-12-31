@@ -54,7 +54,7 @@ export default function UserDashboard() {
       ]);
       setupRealtimeListeners(userData.location, userData.uid);
     } catch (error) {
-      console.error('Error initializing dashboard:', error);
+      console.error('Error initializing dashboard:');
     }
   }, []);
 
@@ -88,7 +88,7 @@ export default function UserDashboard() {
         router.push('/login');
       }
     } catch (error) {
-      console.error('Authentication error:', error);
+      console.error('Authentication error:');
       router.push('/login');
     }
   }, [router, initializeDashboard]); // Added initializeDashboard as dependency
@@ -118,7 +118,7 @@ export default function UserDashboard() {
         setStocks(stocksData);
       }, 
       (error) => {
-        console.error('Error in stocks listener:', error);
+        console.error('Error in stocks listener:');
       }
     );
 
@@ -141,7 +141,7 @@ export default function UserDashboard() {
         calculateSalesAnalysis(salesData);
       }, 
       (error) => {
-        console.error('Error in sales listener:', error);
+        console.error('Error in sales listener:');
       }
     );
 
@@ -175,7 +175,7 @@ export default function UserDashboard() {
       setSales(salesData);
       calculateSalesAnalysis(salesData);
     } catch (error) {
-      console.error('Error fetching sales:', error);
+      console.error('Error fetching sales:');
       alert('Error loading sales data. Please refresh the page.');
     }
   }, [setSales]); // Added setSales as dependency
@@ -230,7 +230,7 @@ export default function UserDashboard() {
       console.log('Fetched stocks:', stocksData.length);
       setStocks(stocksData);
     } catch (error) {
-      console.error('Error fetching stocks:', error);
+      console.error('Error fetching stocks:');
       alert('Error loading stock data. Please refresh the page.');
     }
   }, [setStocks]); // Added setStocks as dependency
@@ -348,7 +348,7 @@ export default function UserDashboard() {
       alert('Sale completed successfully!');
       
     } catch (error) {
-      console.error('Error processing sale:', error);
+      console.error('Error processing sale:');
       let errorMessage = 'Error processing sale. Please try again.';
       
       if (error.code === 'permission-denied') {
@@ -430,7 +430,7 @@ export default function UserDashboard() {
       alert('Item sold successfully!');
       
     } catch (error) {
-      console.error('Error selling item:', error);
+      console.error('Error selling item:');
       let errorMessage = 'Error selling item. Please try again.';
       
       if (error.code === 'permission-denied') {

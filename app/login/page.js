@@ -433,7 +433,7 @@ export default function SignUp() {
                   📧 Your account will require admin approval before you can access the system.
                   <br />
                   <span className="text-xs opacity-80">
-                    Admin users (superadmin@kmelectronics.com, admin@kmelectronics.com, manager@kmelectronics.com) are auto-approved.
+                    Secure your credentials
                   </span>
                 </p>
               </div>

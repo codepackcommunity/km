@@ -116,7 +116,7 @@ export default function ManagerDashboard() {
       }));
       setAllUsers(users);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.error('Error fetching users:');
     }
   }, []);
 
@@ -129,7 +129,7 @@ export default function ManagerDashboard() {
       }));
       setStocks(stocksData);
     } catch (error) {
-      console.error('Error fetching stocks:', error);
+      console.error('Error fetching stocks:');
     }
   }, []);
 
@@ -146,7 +146,7 @@ export default function ManagerDashboard() {
       }));
       setStockRequests(requestsData);
     } catch (error) {
-      console.error('Error fetching stock requests:', error);
+      console.error('Error fetching stock requests:');
     }
   }, []);
 
@@ -196,7 +196,7 @@ export default function ManagerDashboard() {
       setSales(salesData);
       calculateSalesAnalysis(salesData);
     } catch (error) {
-      console.error('Error fetching sales:', error);
+      console.error('Error fetching sales:');
     }
   }, [calculateSalesAnalysis]);
 
@@ -380,7 +380,7 @@ export default function ManagerDashboard() {
       ]);
       setupRealtimeListeners();
     } catch (error) {
-      console.error('Error initializing dashboard:', error);
+      console.error('Error initializing dashboard:');
     }
   }, [fetchAllUsers, fetchAllStocks, fetchAllSalesAnalysis, fetchAllStockRequests, setupRealtimeListeners]);
 
@@ -404,7 +404,7 @@ export default function ManagerDashboard() {
             router.push('/login');
           }
         } catch (error) {
-          console.error('Error during authentication:', error);
+          console.error('Error during authentication:');
           router.push('/login');
         }
       } else {
@@ -446,7 +446,7 @@ export default function ManagerDashboard() {
       fetchAllUsers();
       alert(`Role updated to ${role} successfully!`);
     } catch (error) {
-      console.error('Error assigning role:', error);
+      console.error('Error assigning role:');
       alert('Error updating role. Please try again.');
     }
   };
@@ -468,7 +468,7 @@ export default function ManagerDashboard() {
       fetchAllUsers();
       alert('User location updated successfully!');
     } catch (error) {
-      console.error('Error updating user location:', error);
+      console.error('Error updating user location:');
       alert('Error updating user location. Please try again.');
     }
   };
@@ -510,7 +510,7 @@ export default function ManagerDashboard() {
       
       alert('Stock added successfully!');
     } catch (error) {
-      console.error('Error adding stock:', error);
+      console.error('Error adding stock:');
       alert('Error adding stock. Please try again.');
     }
   };
@@ -524,7 +524,7 @@ export default function ManagerDashboard() {
       });
       alert('Stock updated successfully!');
     } catch (error) {
-      console.error('Error updating stock:', error);
+      console.error('Error updating stock:');
       alert('Error updating stock. Please try again.');
     }
   };
@@ -556,7 +556,7 @@ export default function ManagerDashboard() {
       
       alert('Stock request sent successfully!');
     } catch (error) {
-      console.error('Error requesting stock:', error);
+      console.error('Error requesting stock:');
       alert('Error requesting stock. Please try again.');
     }
   };
@@ -676,7 +676,7 @@ export default function ManagerDashboard() {
 
       alert('Stock request approved and transferred successfully!');
     } catch (error) {
-      console.error('Error approving stock request:', error);
+      console.error('Error approving stock request:');
       
       try {
         await updateDoc(doc(db, 'stockRequests', requestId), {
@@ -723,7 +723,7 @@ export default function ManagerDashboard() {
 
       alert('Stock request rejected!');
     } catch (error) {
-      console.error('Error rejecting stock request:', error);
+      console.error('Error rejecting stock request:');
       alert('Error rejecting stock request. Please try again.');
     }
   };
@@ -756,7 +756,7 @@ export default function ManagerDashboard() {
 
       alert('Item marked as sold!');
     } catch (error) {
-      console.error('Error marking as sold:', error);
+      console.error('Error marking as sold:');
       alert('Error marking item as sold. Please try again.');
     }
   };
