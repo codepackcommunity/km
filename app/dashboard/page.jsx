@@ -546,7 +546,7 @@ if (loading) {
                 <div className='bg-white/5 rounded-lg p-6 border border-white/10'>
                   <h3 className='text-white/70 text-sm'>Available Stock Value</h3>
                   <p className='text-2xl font-bold text-green-400'>
-                    ₹{calculateTotalStockValue().toLocaleString()}
+                    MK {calculateTotalStockValue().toLocaleString()}
                   </p>
                 </div>
                 <div className='bg-white/5 rounded-lg p-6 border border-white/10'>
@@ -558,13 +558,13 @@ if (loading) {
                 <div className='bg-white/5 rounded-lg p-6 border border-white/10'>
                   <h3 className='text-white/70 text-sm'>My Total Revenue</h3>
                   <p className='text-2xl font-bold text-purple-400'>
-                    ₹{salesAnalysis.totalRevenue?.toLocaleString() || 0}
+                    MK {salesAnalysis.totalRevenue?.toLocaleString() || 0}
                   </p>
                 </div>
                 <div className='bg-white/5 rounded-lg p-6 border border-white/10'>
                   <h3 className='text-white/70 text-sm'>Monthly Revenue</h3>
                   <p className='text-2xl font-bold text-orange-400'>
-                    ₹{salesAnalysis.monthlyRevenue?.toLocaleString() || 0}
+                    MK {salesAnalysis.monthlyRevenue?.toLocaleString() || 0}
                   </p>
                 </div>
               </div>
@@ -604,7 +604,7 @@ if (loading) {
                             <div className='text-white/70 text-sm'>Qty: {sale.quantity}</div>
                           </div>
                           <div className='text-right'>
-                            <div className='text-green-400 font-semibold'>₹{sale.finalSalePrice || 0}</div>
+                            <div className='text-green-400 font-semibold'>MK {sale.finalSalePrice || 0}</div>
                             <div className='text-white/50 text-xs'>
                               {sale.soldAt?.toDate().toLocaleDateString() || 'Unknown date'}
                             </div>
@@ -626,7 +626,7 @@ if (loading) {
             <div className='bg-white/5 backdrop-blur-lg rounded-lg border border-white/10 p-6'>
               <div className='flex justify-between items-center mb-6'>
                 <h2 className='text-xl font-semibold text-white'>Available Stock - {currentLocation}</h2>
-                <div className='text-white'>Total Value: ₹{calculateTotalStockValue().toLocaleString()}</div>
+                <div className='text-white'>Total Value: MK {calculateTotalStockValue().toLocaleString()}</div>
               </div>
 
               {/* Search and Filter */}
@@ -684,10 +684,10 @@ if (loading) {
                             {stock.color && <div className='text-white/70 text-sm'>Color: {stock.color}</div>}
                           </td>
                           <td className='py-2'>
-                            <div className='text-green-400'>₹{stock.salePrice || 0}</div>
+                            <div className='text-green-400'>MK {stock.salePrice || 0}</div>
                             {stock.discountPercentage > 0 && (
                               <div className='text-orange-400 text-sm'>
-                                After discount: ₹{(stock.salePrice * (1 - (stock.discountPercentage || 0) / 100)).toFixed(2)}
+                                After discount: MK {(stock.salePrice * (1 - (stock.discountPercentage || 0) / 100)).toFixed(2)}
                               </div>
                             )}
                           </td>
@@ -807,7 +807,7 @@ if (loading) {
                           <div className='text-white/70 text-xs'>{stock.brand} {stock.model}</div>
                         </div>
                         <div className='text-right'>
-                          <div className='text-green-400 text-sm'>₹{stock.salePrice || 0}</div>
+                          <div className='text-green-400 text-sm'>MK {stock.salePrice || 0}</div>
                           <div className='text-white/50 text-xs'>{stock.quantity} available</div>
                         </div>
                       </div>
@@ -824,69 +824,88 @@ if (loading) {
               <h2 className='text-xl font-semibold text-white mb-6'>My Sales History</h2>
               
               {/* Sales Analytics */}
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
-                <div className='bg-white/5 rounded-lg p-4'>
-                  <h3 className='text-white/70 text-sm'>Total Sales</h3>
-                  <p className='text-2xl font-bold text-white'>{salesAnalysis.totalSales}</p>
-                </div>
-                <div className='bg-white/5 rounded-lg p-4'>
-                  <h3 className='text-white/70 text-sm'>Total Revenue</h3>
-                  <p className='text-2xl font-bold text-green-400'>
-                    ₹{salesAnalysis.totalRevenue?.toLocaleString() || 0}
-                  </p>
-                </div>
-                <div className='bg-white/5 rounded-lg p-4'>
-                  <h3 className='text-white/70 text-sm'>Monthly Revenue</h3>
-                  <p className='text-2xl font-bold text-blue-400'>
-                    ₹{salesAnalysis.monthlyRevenue?.toLocaleString() || 0}
-                  </p>
-                </div>
-              </div>
-
               {/* Sales Table */}
               <div className='overflow-x-auto'>
                 <table className='w-full text-white'>
                   <thead>
                     <tr className='border-b border-white/20'>
-                      <th className='text-left py-2'>Item</th>
-                      <th className='text-left py-2'>Quantity</th>
-                      <th className='text-left py-2'>Final Price</th>
-                      <th className='text-left py-2'>Sale Type</th>
-                      <th className='text-left py-2'>Date & Time</th>
+                      <th className='text-left py-3'>Item</th>
+                      <th className='text-left py-3'>Quantity</th>
+                      <th className='text-left py-3'>Final Price</th>
+                      <th className='text-left py-3'>Sale Type</th>
+                      <th className='text-left py-3'>Date & Time</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sales.map((sale) => {
-                      const saleTypeClass = sale.saleType === 'custom_price' ? 'bg-orange-500/20 text-orange-300' : 'bg-blue-500/20 text-blue-300';
-                      const saleTypeText = sale.saleType === 'custom_price' ? 'Custom Price' : 'Standard';
+                    {sales?.length > 0 ? (
+                      sales.map((sale) => {
+                        const saleTypeClass = sale.saleType === 'custom_price' 
+                          ? 'bg-orange-500/20 text-orange-300 border border-orange-500/30' 
+                          : 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
+                        
+                        const saleTypeText = sale.saleType === 'custom_price' 
+                          ? 'Custom Price' 
+                          : 'Standard';
 
-                      return (
-                        <tr key={sale.id} className='border-b border-white/10'>
-                          <td className='py-2'>
-                            <div className='font-semibold'>{sale.brand} {sale.model}</div>
-                            <div className='text-white/70 text-sm'>Code: {sale.itemCode}</div>
-                          </td>
-                          <td className='py-2'>{sale.quantity}</td>
-                          <td className='py-2'>
-                            <div className='text-green-400 font-semibold'>₹{sale.finalSalePrice || 0}</div>
-                            {sale.customPrice && <div className='text-orange-400 text-sm'>Custom price</div>}
-                          </td>
-                          <td className='py-2'>
-                            <span className={`px-2 py-1 rounded-full text-xs ${saleTypeClass}`}>
-                              {saleTypeText}
-                            </span>
-                          </td>
-                          <td className='py-2'>
-                            {sale.soldAt?.toDate().toLocaleString() || 'Unknown date'}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                        return (
+                          <tr key={sale.id || sale.itemCode || Math.random()} 
+                              className='border-b border-white/10 hover:bg-white/5 transition-colors'>
+                            <td className='py-3'>
+                              <div className='font-semibold'>
+                                {sale.brand || 'Unknown'} {sale.model || ''}
+                              </div>
+                              <div className='text-white/70 text-sm'>
+                                Code: {sale.itemCode || 'N/A'}
+                              </div>
+                            </td>
+                            <td className='py-3'>
+                              <span className='bg-white/10 px-3 py-1 rounded-full text-sm'>
+                                {sale.quantity || 1}
+                              </span>
+                            </td>
+                            <td className='py-3'>
+                              <div className='text-green-400 font-semibold'>
+                                MK {(sale.finalSalePrice || 0).toLocaleString('en-IN')}
+                              </div>
+                              {sale.saleType === 'custom_price' && (
+                                <div className='text-orange-400 text-sm mt-1'>
+                                  Custom price
+                                </div>
+                              )}
+                            </td>
+                            <td className='py-3'>
+                              <span className={`px-3 py-1.5 rounded-full text-xs font-medium ${saleTypeClass}`}>
+                                {saleTypeText}
+                              </span>
+                            </td>
+                            <td className='py-3 text-sm'>
+                              {sale.soldAt?.toDate?.().toLocaleString('en-IN', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true
+                              }) || 'Unknown date'}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan="5" className='py-8 text-center text-white/70'>
+                          <div className='flex flex-col items-center justify-center'>
+                            <div className='text-4xl mb-2'>📊</div>
+                            No sales history found
+                            <div className='text-white/50 text-sm mt-1'>
+                              Start making sales to see them here
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
-                {sales.length === 0 && (
-                  <div className='text-center py-8 text-white/70'>No sales history found.</div>
-                )}
               </div>
             </div>
           )}

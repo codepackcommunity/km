@@ -1091,19 +1091,19 @@ return (
                   {realTimeSales.todaySales}
                 </p>
                 <p className={'text-white/50 text-sm mt-1'}>
-                  ₹{realTimeSales.todayRevenue?.toLocaleString() || 0}
+                  MK {realTimeSales.todayRevenue?.toLocaleString() || 0}
                 </p>
               </div>
               <div className={'bg-white/5 rounded-lg p-6 border border-white/10'}>
                 <h3 className={'text-white/70 text-sm'}>Total Revenue</h3>
                 <p className={'text-2xl font-bold text-blue-400'}>
-                  ₹{salesAnalysis.totalRevenue?.toLocaleString() || 0}
+                  MK {salesAnalysis.totalRevenue?.toLocaleString() || 0}
                 </p>
               </div>
               <div className={'bg-white/5 rounded-lg p-6 border border-white/10'}>
                 <h3 className={'text-white/70 text-sm'}>Monthly Revenue</h3>
                 <p className={'text-2xl font-bold text-purple-400'}>
-                  ₹{salesAnalysis.monthlyRevenue?.toLocaleString() || 0}
+                  MK {salesAnalysis.monthlyRevenue?.toLocaleString() || 0}
                 </p>
               </div>
               <div className={'bg-white/5 rounded-lg p-6 border border-white/10'}>
@@ -1158,7 +1158,7 @@ return (
                         </div>
                       </div>
                       <div className={'text-right'}>
-                        <div className={'text-green-400 font-semibold'}>₹{sale.finalSalePrice || 0}</div>
+                        <div className={'text-green-400 font-semibold'}>MK {sale.finalSalePrice || 0}</div>
                         <div className={'text-white/50 text-xs'}>
                           {sale.soldAt?.toDate().toLocaleTimeString() || 'Just now'}
                         </div>
@@ -1180,7 +1180,7 @@ return (
                   <div key={location} className={'bg-white/5 rounded-lg p-4 text-center'}>
                     <h3 className={'text-white/70 text-sm'}>{location}</h3>
                     <p className={'text-lg font-bold text-green-400'}>
-                      ₹{revenue.toLocaleString()}
+                      MK {revenue.toLocaleString()}
                     </p>
                     {salesAnalysis.locationPerformance?.[location] && (
                       <p className={`text-xs mt-1 ${getPerformanceColor(salesAnalysis.locationPerformance[location].score)}`}>
@@ -1219,7 +1219,7 @@ return (
               </div>
               <div className={'bg-white/5 rounded-lg p-6 text-center'}>
                 <div className={'text-2xl font-bold text-blue-400'}>
-                  ₹{realTimeSales.todayRevenue?.toLocaleString() || 0}
+                  MK {realTimeSales.todayRevenue?.toLocaleString() || 0}
                 </div>
                 <div className={'text-white/70 text-sm'}>Today's Revenue</div>
               </div>
@@ -1231,7 +1231,7 @@ return (
               </div>
               <div className={'bg-white/5 rounded-lg p-6 text-center'}>
                 <div className={'text-2xl font-bold text-orange-400'}>
-                  ₹{salesAnalysis.totalRevenue?.toLocaleString() || 0}
+                  MK {salesAnalysis.totalRevenue?.toLocaleString() || 0}
                 </div>
                 <div className={'text-white/70 text-sm'}>Total Revenue</div>
               </div>
@@ -1246,7 +1246,7 @@ return (
                     <div className={'text-white/70 text-xs mb-1'}>{hour}:00</div>
                     <div className={'bg-blue-500/20 rounded-lg p-2'}>
                       <div className={'text-blue-300 text-sm font-semibold'}>
-                        ₹{((realTimeSales.hourlySales[hour] || 0) / 1000).toFixed(0)}K
+                        MK {((realTimeSales.hourlySales[hour] || 0) / 1000).toFixed(0)}K
                       </div>
                     </div>
                   </div>
@@ -1273,8 +1273,8 @@ return (
                     {Object.entries(salesAnalysis.locationPerformance || {}).map(([location, data]) => (
                       <tr key={location} className={'border-b border-white/10'}>
                         <td className={'py-2 font-medium'}>{location}</td>
-                        <td className={'py-2'}>₹{data.metrics.todayRevenue.toLocaleString()}</td>
-                        <td className={'py-2'}>₹{data.metrics.weeklyRevenue.toLocaleString()}</td>
+                        <td className={'py-2'}>MK {data.metrics.todayRevenue.toLocaleString()}</td>
+                        <td className={'py-2'}>MK {data.metrics.weeklyRevenue.toLocaleString()}</td>
                         <td className={'py-2'}>
                           <div className={'flex items-center space-x-2'}>
                             <div className={'w-24 bg-gray-700 rounded-full h-2'}>
@@ -1337,14 +1337,14 @@ return (
                     <div className={'flex justify-between items-center'}>
                       <span className={'text-white/70'}>Today's Revenue</span>
                       <span className={'text-green-400 font-semibold'}>
-                        ₹{data.metrics.todayRevenue.toLocaleString()}
+                        MK {data.metrics.todayRevenue.toLocaleString()}
                       </span>
                     </div>
                     
                     <div className={'flex justify-between items-center'}>
                       <span className={'text-white/70'}>Weekly Revenue</span>
                       <span className={'text-blue-400 font-semibold'}>
-                        ₹{data.metrics.weeklyRevenue.toLocaleString()}
+                        MK {data.metrics.weeklyRevenue.toLocaleString()}
                       </span>
                     </div>
                     
@@ -1358,7 +1358,7 @@ return (
                     <div className={'flex justify-between items-center'}>
                       <span className={'text-white/70'}>Avg. Sale Value</span>
                       <span className={'text-purple-400 font-semibold'}>
-                        ₹{data.metrics.salesCount > 0 ? (data.metrics.totalRevenue / data.metrics.salesCount).toFixed(2) : 0}
+                        MK {data.metrics.salesCount > 0 ? (data.metrics.totalRevenue / data.metrics.salesCount).toFixed(2) : 0}
                       </span>
                     </div>
                     
@@ -1428,7 +1428,7 @@ return (
                 Stock Management - {selectedLocation === 'all' ? 'All Locations' : selectedLocation}
               </h2>
               <div className={'text-white'}>
-                Total Value: ₹{calculateTotalStockValue().toLocaleString()}
+                Total Value: MK {calculateTotalStockValue().toLocaleString()}
               </div>
             </div>
 
@@ -1529,10 +1529,10 @@ return (
                       </td>
                       <td className={'py-2 font-mono'}>{stock.itemCode}</td>
                       <td className={'py-2'}>{stock.brand} {stock.model}</td>
-                      <td className={'py-2'}>₹{stock.orderPrice || 0}</td>
-                      <td className={'py-2'}>₹{stock.salePrice || 0}</td>
+                      <td className={'py-2'}>MK {stock.orderPrice || 0}</td>
+                      <td className={'py-2'}>MK {stock.salePrice || 0}</td>
                       <td className={'py-2'}>{stock.quantity || 0}</td>
-                      <td className={'py-2'}>₹{((stock.orderPrice || 0) * (stock.quantity || 0)).toLocaleString()}</td>
+                      <td className={'py-2'}>MK {((stock.orderPrice || 0) * (stock.quantity || 0)).toLocaleString()}</td>
                       <td className={'py-2 space-x-2'}>
                         <button
                           onClick={() => handleUpdateStock(stock.id, { quantity: (stock.quantity || 0) + 1 })}
@@ -1570,45 +1570,60 @@ return (
               <div className={'bg-white/5 rounded-lg p-4'}>
                 <h3 className={'text-white/70 text-sm'}>Total Revenue</h3>
                 <p className={'text-2xl font-bold text-green-400'}>
-                  ₹{salesAnalysis.totalRevenue?.toLocaleString() || 0}
+                  MK {salesAnalysis.totalRevenue?.toLocaleString() || 0}
                 </p>
               </div>
               <div className={'bg-white/5 rounded-lg p-4'}>
                 <h3 className={'text-white/70 text-sm'}>Monthly Revenue</h3>
                 <p className={'text-2xl font-bold text-blue-400'}>
-                  ₹{salesAnalysis.monthlyRevenue?.toLocaleString() || 0}
+                  MK {salesAnalysis.monthlyRevenue?.toLocaleString() || 0}
                 </p>
               </div>
             </div>
 
-            <div className={'overflow-x-auto'}>
-              <table className={'w-full text-white'}>
-                <thead>
-                  <tr className={'border-b border-white/20'}>
-                    <th className={'text-left py-2'}>Item</th>
-                    <th className={'text-left py-2'}>Location</th>
-                    <th className={'text-left py-2'}>Sold By</th>
-                    <th className={'text-left py-2'}>Final Price</th>
-                    <th className={'text-left py-2'}>Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {getFilteredSales().map((sale) => (
-                    <tr key={sale.id} className={'border-b border-white/10'}>
-                      <td className={'py-2'}>
-                        {sale.brand} {sale.model} ({sale.itemCode})
+            <div className="overflow-x-auto">
+            <table className="w-full text-white">
+              <thead>
+                <tr className="border-b border-white/20">
+                  <th className="text-left py-2">Item</th>
+                  <th className="text-left py-2">Location</th>
+                  <th className="text-left py-2">Sold By</th>
+                  <th className="text-left py-2">Final Price</th>
+                  <th className="text-left py-2">Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {getFilteredSales()?.length > 0 ? (
+                  getFilteredSales().map((sale) => (
+                    <tr key={sale.id} className="border-b border-white/10 hover:bg-white/5">
+                      <td className="py-3">
+                        {sale.brand || ''} {sale.model || ''} 
+                        {sale.itemCode ? ` (${sale.itemCode})` : ''}
                       </td>
-                      <td className={'py-2'}>{sale.location || 'Unknown'}</td>
-                      <td className={'py-2'}>{sale.soldByName || sale.soldBy}</td>
-                      <td className={'py-2'}>₹{sale.finalSalePrice || 0}</td>
-                      <td className={'py-2'}>
-                        {sale.soldAt?.toDate().toLocaleDateString() || 'Unknown date'}
+                      <td className="py-3">{sale.location || 'Unknown'}</td>
+                      <td className="py-3">{sale.soldByName || sale.soldBy || 'Unknown'}</td>
+                      <td className="py-3 font-medium">
+                        MK {(sale.finalSalePrice || 0).toLocaleString()}
+                      </td>
+                      <td className="py-3">
+                        {sale.soldAt?.toDate?.().toLocaleDateString('en-IN', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric'
+                        }) || 'Unknown date'}
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="5" className="py-8 text-center text-white/50">
+                      No sales records found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>  
           </div>
         )}
 
