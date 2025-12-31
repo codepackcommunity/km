@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase/config";
@@ -82,39 +82,145 @@ export default function SuperAdminDashboard() {
   const [processingUser, setProcessingUser] = useState(null);
   const [timePeriod, setTimePeriod] = useState("today");
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const userDoc = await getDocs(
-            query(collection(db, "users"), where("uid", "==", user.uid))
-          );
-          
-          if (!userDoc.empty) {
-            const userData = userDoc.docs[0].data();
-            if (userData.role === "superadmin") {
-              setUser(userData);
-              await initializeDashboard();
-            } else {
-              router.push("/dashboard");
-            }
-          } else {
-            router.push("/login");
-          }
-        } catch (error) {
-          console.error("Error during authentication:", error);
-          router.push("/login");
-        }
-      } else {
-        router.push("/login");
+  // Memoized functions to prevent infinite re-renders
+  const fetchAllUsers = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const users = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, []);
+
+  const fetchAllStocks = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "stocks"));
+      const stocksData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setStocks(stocksData);
+    } catch (error) {
+      console.error("Error fetching stocks:", error);
+    }
+  }, []);
+
+  const fetchAllSalesAnalysis = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "sales"));
+      const salesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSales(salesData);
+      calculateSalesAnalysis(salesData);
+    } catch (error) {
+      console.error("Error fetching sales:", error);
+    }
+  }, []);
+
+  const fetchAllStockRequests = useCallback(async () => {
+    try {
+      const q = query(
+        collection(db, "stockRequests"),
+        where("status", "==", "pending")
+      );
+      const querySnapshot = await getDocs(q);
+      const requestsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setStockRequests(requestsData);
+    } catch (error) {
+      console.error("Error fetching stock requests:", error);
+    }
+  }, []);
+
+  const fetchApprovalSettings = useCallback(async () => {
+    try {
+      const settingsDoc = await getDocs(collection(db, "approvalSettings"));
+      if (!settingsDoc.empty) {
+        const settings = settingsDoc.docs[0].data();
+        setApprovalSettings(settings);
       }
-      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching approval settings:", error);
+    }
+  }, []);
+
+  const fetchUserApprovals = useCallback(async () => {
+    try {
+      // Fetch pending users
+      const q = query(
+        collection(db, "users"),
+        where("status", "==", "pending")
+      );
+      const querySnapshot = await getDocs(q);
+      const pendingUsersData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setPendingUsers(pendingUsersData);
+      
+      // Fetch recently approved/rejected users for history
+      const historyQ = query(
+        collection(db, "users"),
+        where("status", "in", ["approved", "rejected"])
+      );
+      const historySnapshot = await getDocs(historyQ);
+      const historyData = historySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setUserApprovals(historyData);
+      
+    } catch (error) {
+      console.error("Error fetching user approvals:", error);
+      alert("Error loading user approvals. Please refresh the page.");
+    }
+  }, []);
+
+  const calculateSalesAnalysis = useCallback((salesData) => {
+    const analysis = {
+      totalSales: 0,
+      totalRevenue: 0,
+      monthlyRevenue: 0,
+      topProducts: {},
+      salesByUser: {},
+      revenueByLocation: {},
+      locationPerformance: salesAnalysis.locationPerformance
+    };
+
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    salesData.forEach(sale => {
+      analysis.totalRevenue += sale.finalSalePrice || 0;
+      analysis.totalSales++;
+
+      const saleDate = sale.soldAt?.toDate();
+      if (saleDate && saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
+        analysis.monthlyRevenue += sale.finalSalePrice || 0;
+      }
+
+      const productKey = `${sale.brand}-${sale.model}`;
+      analysis.topProducts[productKey] = (analysis.topProducts[productKey] || 0) + 1;
+
+      const userName = sale.soldByName || sale.soldBy;
+      analysis.salesByUser[userName] = (analysis.salesByUser[userName] || 0) + (sale.finalSalePrice || 0);
+
+      const location = sale.location || "Unknown";
+      analysis.revenueByLocation[location] = (analysis.revenueByLocation[location] || 0) + (sale.finalSalePrice || 0);
     });
 
-    return () => unsubscribe();
-  }, [router, initializeDashboard]);
+    setSalesAnalysis(analysis);
+  }, [salesAnalysis.locationPerformance]);
 
-  const initializeDashboard = async () => {
+  const initializeDashboard = useCallback(async () => {
     try {
       await Promise.all([
         fetchAllUsers(),
@@ -128,9 +234,18 @@ export default function SuperAdminDashboard() {
     } catch (error) {
       console.error("Error initializing dashboard:", error);
     }
-  };
+  }, [
+    fetchAllUsers,
+    fetchAllStocks,
+    fetchAllSalesAnalysis,
+    fetchAllStockRequests,
+    fetchApprovalSettings,
+    fetchUserApprovals
+  ]);
 
-  const setupRealtimeListeners = () => {
+  const setupRealtimeListeners = useCallback(() => {
+    if (!user) return;
+
     // Real-time stock updates
     const stocksQuery = query(collection(db, "stocks"));
     
@@ -193,10 +308,9 @@ export default function SuperAdminDashboard() {
       unsubscribeRequests();
       unsubscribeUsers();
     };
-  };
+  }, [user, calculateSalesAnalysis]);
 
-  // Real-time Sales Calculations
-  const calculateRealTimeSales = (salesData) => {
+  const calculateRealTimeSales = useCallback((salesData) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -222,10 +336,9 @@ export default function SuperAdminDashboard() {
       hourlySales,
       liveSales
     });
-  };
+  }, []);
 
-  // Location Performance Calculation
-  const calculateLocationPerformance = (salesData) => {
+  const calculateLocationPerformance = useCallback((salesData) => {
     const locationMetrics = {};
     const today = new Date();
     const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -313,7 +426,7 @@ export default function SuperAdminDashboard() {
       ...prev,
       locationPerformance
     }));
-  };
+  }, []);
 
   // Performance Helpers
   const getPerformanceGrade = (score) => {
@@ -352,18 +465,6 @@ export default function SuperAdminDashboard() {
   };
 
   // Approval System Functions
-  const fetchApprovalSettings = async () => {
-    try {
-      const settingsDoc = await getDocs(collection(db, "approvalSettings"));
-      if (!settingsDoc.empty) {
-        const settings = settingsDoc.docs[0].data();
-        setApprovalSettings(settings);
-      }
-    } catch (error) {
-      console.error("Error fetching approval settings:", error);
-    }
-  };
-
   const saveApprovalSettings = async () => {
     try {
       const settingsDoc = await getDocs(collection(db, "approvalSettings"));
@@ -387,39 +488,7 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // User Approval Functions - FIXED VERSION
-  const fetchUserApprovals = async () => {
-    try {
-      // Fetch pending users
-      const q = query(
-        collection(db, "users"),
-        where("status", "==", "pending")
-      );
-      const querySnapshot = await getDocs(q);
-      const pendingUsersData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setPendingUsers(pendingUsersData);
-      
-      // Fetch recently approved/rejected users for history
-      const historyQ = query(
-        collection(db, "users"),
-        where("status", "in", ["approved", "rejected"])
-      );
-      const historySnapshot = await getDocs(historyQ);
-      const historyData = historySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setUserApprovals(historyData);
-      
-    } catch (error) {
-      console.error("Error fetching user approvals:", error);
-      alert("Error loading user approvals. Please refresh the page.");
-    }
-  };
-
+  // User Approval Functions
   const handleApproveUser = async (userId, userData) => {
     if (!userId || !userData) {
       alert("Invalid user data provided.");
@@ -429,17 +498,14 @@ export default function SuperAdminDashboard() {
     setProcessingUser(userId);
 
     try {
-      // Validate user document exists
       const userDocRef = doc(db, "users", userId);
       
-      // First check if document exists
       const userDoc = await getDoc(userDocRef);
       if (!userDoc.exists()) {
         alert("User document not found.");
         return;
       }
 
-      // Update user status
       await updateDoc(userDocRef, {
         status: "approved",
         approvedBy: user.uid,
@@ -448,7 +514,6 @@ export default function SuperAdminDashboard() {
         updatedAt: serverTimestamp()
       });
 
-      // Add to approval history
       try {
         await addDoc(collection(db, "userApprovalHistory"), {
           userId: userId,
@@ -463,18 +528,14 @@ export default function SuperAdminDashboard() {
         });
       } catch (historyError) {
         console.error("Error adding to approval history:", historyError);
-        // Continue even if history fails
       }
 
       alert("User approved successfully!");
-      
-      // Refresh the approvals list
       await fetchUserApprovals();
       
     } catch (error) {
       console.error("Error approving user:", error);
       
-      // More specific error messages
       if (error.code === 'permission-denied') {
         alert("Permission denied. Please check your Firestore security rules.");
       } else if (error.code === 'not-found') {
@@ -512,7 +573,6 @@ export default function SuperAdminDashboard() {
         updatedAt: serverTimestamp()
       });
 
-      // Add to approval history
       try {
         await addDoc(collection(db, "userApprovalHistory"), {
           userId: userId,
@@ -760,100 +820,6 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // Core Data Fetching Functions
-  const fetchAllUsers = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "users"));
-      const users = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setAllUsers(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
-  const fetchAllStocks = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "stocks"));
-      const stocksData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setStocks(stocksData);
-    } catch (error) {
-      console.error("Error fetching stocks:", error);
-    }
-  };
-
-  const fetchAllSalesAnalysis = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "sales"));
-      const salesData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setSales(salesData);
-      calculateSalesAnalysis(salesData);
-    } catch (error) {
-      console.error("Error fetching sales:", error);
-    }
-  };
-
-  const fetchAllStockRequests = async () => {
-    try {
-      const q = query(
-        collection(db, "stockRequests"),
-        where("status", "==", "pending")
-      );
-      const querySnapshot = await getDocs(q);
-      const requestsData = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setStockRequests(requestsData);
-    } catch (error) {
-      console.error("Error fetching stock requests:", error);
-    }
-  };
-
-  const calculateSalesAnalysis = (salesData) => {
-    const analysis = {
-      totalSales: 0,
-      totalRevenue: 0,
-      monthlyRevenue: 0,
-      topProducts: {},
-      salesByUser: {},
-      revenueByLocation: {},
-      locationPerformance: salesAnalysis.locationPerformance
-    };
-
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    salesData.forEach(sale => {
-      analysis.totalRevenue += sale.finalSalePrice || 0;
-      analysis.totalSales++;
-
-      const saleDate = sale.soldAt?.toDate();
-      if (saleDate && saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
-        analysis.monthlyRevenue += sale.finalSalePrice || 0;
-      }
-
-      const productKey = `${sale.brand}-${sale.model}`;
-      analysis.topProducts[productKey] = (analysis.topProducts[productKey] || 0) + 1;
-
-      const userName = sale.soldByName || sale.soldBy;
-      analysis.salesByUser[userName] = (analysis.salesByUser[userName] || 0) + (sale.finalSalePrice || 0);
-
-      const location = sale.location || "Unknown";
-      analysis.revenueByLocation[location] = (analysis.revenueByLocation[location] || 0) + (sale.finalSalePrice || 0);
-    });
-
-    setSalesAnalysis(analysis);
-  };
-
   // User Management Functions
   const handleAssignRole = async (userId, role) => {
     try {
@@ -994,6 +960,38 @@ export default function SuperAdminDashboard() {
       return total + ((stock.orderPrice || 0) * (stock.quantity || 0));
     }, 0);
   };
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        try {
+          const userDoc = await getDocs(
+            query(collection(db, "users"), where("uid", "==", authUser.uid))
+          );
+          
+          if (!userDoc.empty) {
+            const userData = userDoc.docs[0].data();
+            if (userData.role === "superadmin") {
+              setUser(userData);
+              await initializeDashboard();
+            } else {
+              router.push("/dashboard");
+            }
+          } else {
+            router.push("/login");
+          }
+        } catch (error) {
+          console.error("Error during authentication:", error);
+          router.push("/login");
+        }
+      } else {
+        router.push("/login");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router, initializeDashboard]);
 
   if (loading) {
     return (

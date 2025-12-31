@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase/config";
@@ -44,21 +44,8 @@ export default function UserDashboard() {
   const userRef = useRef(null);
   const locationRef = useRef("");
 
-  // Authentication and initialization
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        await handleUserAuth(firebaseUser);
-      } else {
-        router.push("/login");
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router, handleUserAuth]);
-
-  const handleUserAuth = async (firebaseUser) => {
+  // Wrap handleUserAuth in useCallback to prevent infinite re-renders
+  const handleUserAuth = useCallback(async (firebaseUser) => {
     try {
       console.log("Authenticating user:", firebaseUser.uid);
       
@@ -90,9 +77,10 @@ export default function UserDashboard() {
       console.error("Authentication error:", error);
       router.push("/login");
     }
-  };
+  }, [router]);
 
-  const initializeDashboard = async (userData) => {
+  // Wrap initializeDashboard in useCallback
+  const initializeDashboard = useCallback(async (userData) => {
     try {
       console.log("Initializing dashboard for location:", userData.location);
       await Promise.all([
@@ -103,7 +91,21 @@ export default function UserDashboard() {
     } catch (error) {
       console.error("Error initializing dashboard:", error);
     }
-  };
+  }, []);
+
+  // Authentication and initialization
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        await handleUserAuth(firebaseUser);
+      } else {
+        router.push("/login");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router, handleUserAuth]);
 
   const setupRealtimeListeners = (location, userId) => {
     console.log("Setting up realtime listeners for location:", location, "user:", userId);

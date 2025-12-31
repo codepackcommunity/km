@@ -1,5 +1,5 @@
 "use client"
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth, db } from "@/app/lib/firebase/config";
@@ -70,104 +70,138 @@ export default function ManagerDashboard() {
   const [processingRequest, setProcessingRequest] = useState(null);
   const [timePeriod, setTimePeriod] = useState("today");
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const userDoc = await getDocs(
-            query(collection(db, "users"), where("uid", "==", user.uid))
-          );
-          
-          if (!userDoc.empty) {
-            const userData = userDoc.docs[0].data();
-            if (userData.role === "manager") {
-              setUser(userData);
-              await initializeDashboard();
-            } else {
-              router.push("/dashboard");
-            }
-          } else {
-            router.push("/login");
-          }
-        } catch (error) {
-          console.error("Error during authentication:", error);
-          router.push("/login");
-        }
-      } else {
-        router.push("/login");
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [router, initializeDashboard]);
-
-  const initializeDashboard = async () => {
-    try {
-      await Promise.all([
-        fetchAllUsers(),
-        fetchAllStocks(),
-        fetchAllSalesAnalysis(),
-        fetchAllStockRequests()
-      ]);
-      setupRealtimeListeners();
-    } catch (error) {
-      console.error("Error initializing dashboard:", error);
-    }
+  // Performance Helpers - moved up to be used in other functions
+  const getPerformanceGrade = (score) => {
+    if (score >= 90) return "Excellent";
+    if (score >= 80) return "Very Good";
+    if (score >= 70) return "Good";
+    if (score >= 60) return "Average";
+    if (score >= 50) return "Below Average";
+    return "Needs Attention";
   };
 
-  const setupRealtimeListeners = () => {
-    // Real-time stock updates
-    const stocksQuery = query(collection(db, "stocks"));
-    
-    const unsubscribeStocks = onSnapshot(stocksQuery, (snapshot) => {
-      const stocksData = snapshot.docs.map(doc => ({
+  const getPerformanceColor = (score) => {
+    if (score >= 80) return "text-green-400";
+    if (score >= 60) return "text-yellow-400";
+    if (score >= 40) return "text-orange-400";
+    return "text-red-400";
+  };
+
+  const getPerformanceBadge = (score) => {
+    if (score >= 80) return "bg-green-500/20 text-green-300";
+    if (score >= 60) return "bg-yellow-500/20 text-yellow-300";
+    if (score >= 40) return "bg-orange-500/20 text-orange-300";
+    return "bg-red-500/20 text-red-300";
+  };
+
+  const getTrendIcon = (trend) => {
+    if (trend === "up") return "↗";
+    if (trend === "down") return "↘";
+    return "→";
+  };
+
+  const getTrendColor = (trend) => {
+    if (trend === "up") return "text-green-400";
+    if (trend === "down") return "text-red-400";
+    return "text-gray-400";
+  };
+
+  // Core Data Fetching Functions
+  const fetchAllUsers = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      const users = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  }, []);
+
+  const fetchAllStocks = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "stocks"));
+      const stocksData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       setStocks(stocksData);
+    } catch (error) {
+      console.error("Error fetching stocks:", error);
+    }
+  }, []);
+
+  const fetchAllStockRequests = useCallback(async () => {
+    try {
+      const q = query(
+        collection(db, "stockRequests"),
+        where("status", "==", "pending")
+      );
+      const querySnapshot = await getDocs(q);
+      const requestsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setStockRequests(requestsData);
+    } catch (error) {
+      console.error("Error fetching stock requests:", error);
+    }
+  }, []);
+
+  const calculateSalesAnalysis = useCallback((salesData) => {
+    const analysis = {
+      totalSales: 0,
+      totalRevenue: 0,
+      monthlyRevenue: 0,
+      topProducts: {},
+      salesByUser: {},
+      revenueByLocation: {},
+      locationPerformance: salesAnalysis.locationPerformance
+    };
+
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    salesData.forEach(sale => {
+      analysis.totalRevenue += sale.finalSalePrice || 0;
+      analysis.totalSales++;
+
+      const saleDate = sale.soldAt?.toDate();
+      if (saleDate && saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
+        analysis.monthlyRevenue += sale.finalSalePrice || 0;
+      }
+
+      const productKey = `${sale.brand}-${sale.model}`;
+      analysis.topProducts[productKey] = (analysis.topProducts[productKey] || 0) + 1;
+
+      const userName = sale.soldByName || sale.soldBy;
+      analysis.salesByUser[userName] = (analysis.salesByUser[userName] || 0) + (sale.finalSalePrice || 0);
+
+      const location = sale.location || "Unknown";
+      analysis.revenueByLocation[location] = (analysis.revenueByLocation[location] || 0) + (sale.finalSalePrice || 0);
     });
 
-    // Real-time sales updates
-    const salesQuery = query(
-      collection(db, "sales"),
-      orderBy("soldAt", "desc")
-    );
+    setSalesAnalysis(analysis);
+  }, [salesAnalysis.locationPerformance]);
 
-    const unsubscribeSales = onSnapshot(salesQuery, (snapshot) => {
-      const salesData = snapshot.docs.map(doc => ({
+  const fetchAllSalesAnalysis = useCallback(async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, "sales"));
+      const salesData = querySnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       setSales(salesData);
       calculateSalesAnalysis(salesData);
-      calculateRealTimeSales(salesData);
-      calculateLocationPerformance(salesData);
-    });
-
-    // Real-time stock requests
-    const requestsQuery = query(
-      collection(db, "stockRequests"),
-      where("status", "==", "pending")
-    );
-
-    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
-      const requestsData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setStockRequests(requestsData);
-    });
-
-    return () => {
-      unsubscribeStocks();
-      unsubscribeSales();
-      unsubscribeRequests();
-    };
-  };
+    } catch (error) {
+      console.error("Error fetching sales:", error);
+    }
+  }, [calculateSalesAnalysis]);
 
   // Real-time Sales Calculations
-  const calculateRealTimeSales = (salesData) => {
+  const calculateRealTimeSales = useCallback((salesData) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -193,10 +227,10 @@ export default function ManagerDashboard() {
       hourlySales,
       liveSales
     });
-  };
+  }, []);
 
   // Location Performance Calculation
-  const calculateLocationPerformance = (salesData) => {
+  const calculateLocationPerformance = useCallback((salesData) => {
     const locationMetrics = {};
     const today = new Date();
     const oneWeekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
@@ -284,137 +318,103 @@ export default function ManagerDashboard() {
       ...prev,
       locationPerformance
     }));
-  };
+  }, [getPerformanceGrade]);
 
-  // Performance Helpers
-  const getPerformanceGrade = (score) => {
-    if (score >= 90) return "Excellent";
-    if (score >= 80) return "Very Good";
-    if (score >= 70) return "Good";
-    if (score >= 60) return "Average";
-    if (score >= 50) return "Below Average";
-    return "Needs Attention";
-  };
-
-  const getPerformanceColor = (score) => {
-    if (score >= 80) return "text-green-400";
-    if (score >= 60) return "text-yellow-400";
-    if (score >= 40) return "text-orange-400";
-    return "text-red-400";
-  };
-
-  const getPerformanceBadge = (score) => {
-    if (score >= 80) return "bg-green-500/20 text-green-300";
-    if (score >= 60) return "bg-yellow-500/20 text-yellow-300";
-    if (score >= 40) return "bg-orange-500/20 text-orange-300";
-    return "bg-red-500/20 text-red-300";
-  };
-
-  const getTrendIcon = (trend) => {
-    if (trend === "up") return "↗";
-    if (trend === "down") return "↘";
-    return "→";
-  };
-
-  const getTrendColor = (trend) => {
-    if (trend === "up") return "text-green-400";
-    if (trend === "down") return "text-red-400";
-    return "text-gray-400";
-  };
-
-  // Core Data Fetching Functions
-  const fetchAllUsers = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "users"));
-      const users = querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-      setAllUsers(users);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    }
-  };
-
-  const fetchAllStocks = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "stocks"));
-      const stocksData = querySnapshot.docs.map(doc => ({
+  const setupRealtimeListeners = useCallback(() => {
+    // Real-time stock updates
+    const stocksQuery = query(collection(db, "stocks"));
+    
+    const unsubscribeStocks = onSnapshot(stocksQuery, (snapshot) => {
+      const stocksData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       setStocks(stocksData);
-    } catch (error) {
-      console.error("Error fetching stocks:", error);
-    }
-  };
+    });
 
-  const fetchAllSalesAnalysis = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "sales"));
-      const salesData = querySnapshot.docs.map(doc => ({
+    // Real-time sales updates
+    const salesQuery = query(
+      collection(db, "sales"),
+      orderBy("soldAt", "desc")
+    );
+
+    const unsubscribeSales = onSnapshot(salesQuery, (snapshot) => {
+      const salesData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       setSales(salesData);
       calculateSalesAnalysis(salesData);
-    } catch (error) {
-      console.error("Error fetching sales:", error);
-    }
-  };
+      calculateRealTimeSales(salesData);
+      calculateLocationPerformance(salesData);
+    });
 
-  const fetchAllStockRequests = async () => {
-    try {
-      const q = query(
-        collection(db, "stockRequests"),
-        where("status", "==", "pending")
-      );
-      const querySnapshot = await getDocs(q);
-      const requestsData = querySnapshot.docs.map(doc => ({
+    // Real-time stock requests
+    const requestsQuery = query(
+      collection(db, "stockRequests"),
+      where("status", "==", "pending")
+    );
+
+    const unsubscribeRequests = onSnapshot(requestsQuery, (snapshot) => {
+      const requestsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
       setStockRequests(requestsData);
-    } catch (error) {
-      console.error("Error fetching stock requests:", error);
-    }
-  };
-
-  const calculateSalesAnalysis = (salesData) => {
-    const analysis = {
-      totalSales: 0,
-      totalRevenue: 0,
-      monthlyRevenue: 0,
-      topProducts: {},
-      salesByUser: {},
-      revenueByLocation: {},
-      locationPerformance: salesAnalysis.locationPerformance
-    };
-
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    salesData.forEach(sale => {
-      analysis.totalRevenue += sale.finalSalePrice || 0;
-      analysis.totalSales++;
-
-      const saleDate = sale.soldAt?.toDate();
-      if (saleDate && saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear) {
-        analysis.monthlyRevenue += sale.finalSalePrice || 0;
-      }
-
-      const productKey = `${sale.brand}-${sale.model}`;
-      analysis.topProducts[productKey] = (analysis.topProducts[productKey] || 0) + 1;
-
-      const userName = sale.soldByName || sale.soldBy;
-      analysis.salesByUser[userName] = (analysis.salesByUser[userName] || 0) + (sale.finalSalePrice || 0);
-
-      const location = sale.location || "Unknown";
-      analysis.revenueByLocation[location] = (analysis.revenueByLocation[location] || 0) + (sale.finalSalePrice || 0);
     });
 
-    setSalesAnalysis(analysis);
-  };
+    return () => {
+      unsubscribeStocks();
+      unsubscribeSales();
+      unsubscribeRequests();
+    };
+  }, [calculateSalesAnalysis, calculateRealTimeSales, calculateLocationPerformance]);
+
+  const initializeDashboard = useCallback(async () => {
+    try {
+      await Promise.all([
+        fetchAllUsers(),
+        fetchAllStocks(),
+        fetchAllSalesAnalysis(),
+        fetchAllStockRequests()
+      ]);
+      setupRealtimeListeners();
+    } catch (error) {
+      console.error("Error initializing dashboard:", error);
+    }
+  }, [fetchAllUsers, fetchAllStocks, fetchAllSalesAnalysis, fetchAllStockRequests, setupRealtimeListeners]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          const userDoc = await getDocs(
+            query(collection(db, "users"), where("uid", "==", user.uid))
+          );
+          
+          if (!userDoc.empty) {
+            const userData = userDoc.docs[0].data();
+            if (userData.role === "manager") {
+              setUser(userData);
+              await initializeDashboard();
+            } else {
+              router.push("/dashboard");
+            }
+          } else {
+            router.push("/login");
+          }
+        } catch (error) {
+          console.error("Error during authentication:", error);
+          router.push("/login");
+        }
+      } else {
+        router.push("/login");
+      }
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [router, initializeDashboard]);
 
   // User Management Functions with Manager Restrictions
   const handleAssignRole = async (userId, role, currentUserRole) => {
@@ -806,7 +806,7 @@ export default function ManagerDashboard() {
       </div>
     );
   }
-
+  
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Header */}
