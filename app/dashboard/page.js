@@ -56,7 +56,7 @@ export default function UserDashboard() {
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, handleUserAuth]);
 
   const handleUserAuth = async (firebaseUser) => {
     try {

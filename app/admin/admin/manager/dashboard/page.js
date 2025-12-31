@@ -100,7 +100,7 @@ export default function ManagerDashboard() {
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, initializeDashboard]);
 
   const initializeDashboard = async () => {
     try {

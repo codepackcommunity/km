@@ -112,7 +112,7 @@ export default function SuperAdminDashboard() {
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, [router, initializeDashboard]);
 
   const initializeDashboard = async () => {
     try {
